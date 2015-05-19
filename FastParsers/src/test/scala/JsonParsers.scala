@@ -29,7 +29,10 @@ object JsonParsers {
 
   object JSonImpl2 {
     import fastparsers.framework.implementations.FastParsersCharArray._
+
     val jsonparser = FastParsersCharArray{
+      def x : Parser[Any] = whitespaces ~> (whitespaces | nullValue | nullValue )
+
       def value:Parser[Any] = whitespaces ~> (obj | arr | stringLit | decimalNumber | nullValue | trueValue | falseValue)
       def obj:Parser[Any] = '{' ~> repsep(member,comma) <~ closeBracket
       def arr:Parser[Any] = '[' ~> repsep(value,comma) <~ closeSBracket

@@ -59,6 +59,7 @@ class ParserSpecs extends FunSuite {
     def rule56 = (number ^^ (_.toString)) >> {case b => ':' ~> rep(b)}
   }
 
+/*
   test("Rule1 test") {
     shouldSucced(parser.rule1){
       "bacb" gives (('b','a'),('c','b'))
@@ -411,4 +412,5 @@ class ParserSpecs extends FunSuite {
       "", "abc","12"
     )
   }
+*/
 }

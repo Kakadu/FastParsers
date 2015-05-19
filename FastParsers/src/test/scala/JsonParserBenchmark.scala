@@ -6,6 +6,10 @@ import fastparsers.input.InputWindow
 import org.scalameter.api._
 import JsonParsers._
 import scala.collection.mutable.ListBuffer
+import org.scalameter.api._
+import org.scalameter.reporting.DsvReporter
+import scala.collection.mutable.ArrayBuffer
+import scala.reflect.runtime.universe._
 
 import lms._
 import InputWindow._
@@ -16,7 +20,10 @@ object JsonParserBenchmark extends PerformanceTest {
     new Executor.Warmer.Default,
     Aggregator.min,
     new Measurer.Default)
-  lazy val reporter = new LoggingReporter
+  //lazy val reporter = new LoggingReporter
+  //lazy val reporter = new DsvReporter(',')
+  //lazy val reporter = Reporter.Composite(LoggingReporter(), DsvReporter(',') )
+  lazy val reporter = Reporter.Composite(LoggingReporter(), CsvReporter(',') )
   lazy val persistor = Persistor.None
 
   val range = Gen.enumeration("size")(10)
@@ -39,13 +46,14 @@ object JsonParserBenchmark extends PerformanceTest {
   val vbigFileSeq = new FastCharSequence(vbigFileArray)
 
 
-  /*performance of "JsonParser on small inputs" in {
+  performance of "JsonParser on small inputs" in {
     measure method "FastParsers" in {
       using(range) in { j =>
         for (i <- 1 to j; m <- files)
           JSonImplBoxed.jsonparser.value(m)
       }
     }
+
     measure method "LMS (gen2)" in {
       using(range) in { j =>
         for (i <- 1 to j; m <- files)
@@ -53,13 +61,13 @@ object JsonParserBenchmark extends PerformanceTest {
       }
     }
 
-    /*measure method "Combinators" in {
+    measure method "Combinators" in {
       using(range) in { j =>
         for (i <- 1 to j; m <- files)
           JSON.parse(JSON.value,new FastCharSequence(m))
       }
-    }*/
-  }*/
+    }
+  }
 
 
  /* performance of "JsonParser on a big input" in {
@@ -69,7 +77,7 @@ object JsonParserBenchmark extends PerformanceTest {
           JSonImplBoxed.jsonparser.value(bigFileArray)
       }
     }
- 
+
     measure method "LMS (gen2)" in {
       using(range) in { j =>
         for (i <- 1 to j)
@@ -110,9 +118,9 @@ object JsonParserBenchmark extends PerformanceTest {
     }
   }*/
 
-
+/*
   performance of "Different JSonParser implementations" in {
-    /*measure method "FastParsers" in {
+    measure method "FastParsers" in {
       using(range) in { j =>
         for (i <- 1 to j)
           JSonImpl2.jsonparser.value(bigFileArray)
@@ -172,8 +180,76 @@ object JsonParserBenchmark extends PerformanceTest {
         //for (i <- 1 to j)
           JSON.parse(JSON.value,bigFile)
       }
-    }*/
+    }
 
   }
+     */
+}
 
+// https://github.com/amirsh/benchmarking-scala-manifests/blob/master/TestMan.scala
+case class CsvReporter(delimiter: Char) extends Reporter {
+  import org.scalameter._
+  import java.io._
+  import java.util.Date
+  import java.util.TimeZone
+  import java.text.SimpleDateFormat
+  import utils.Tree
+  val sep = File.separator
+  def report(result: CurveData, persistor: Persistor) {
+  }
+  def report(result: Tree[CurveData], persistor: Persistor) = {
+    val currentDate = new Date
+    val resultdir = "csv_results"
+
+    def getHeadCurveData(tree: Tree[CurveData]): CurveData = {
+      tree.items.headOption.getOrElse({
+        tree.children.filter(t => getHeadCurveData(t) != null).headOption.map(getHeadCurveData).getOrElse(null)
+      }
+      )
+    }
+    val headCurveData = getHeadCurveData(result)
+    new File(s"$resultdir").mkdir()
+    val filename = s"$resultdir$sep${headCurveData.context.scope}.csv"
+    def print() {
+      var writer: PrintWriter = null
+      try {
+        writer = new PrintWriter(new FileWriter(filename, false))
+        // writer = System.out
+        writeData(writer)
+      } finally {
+        if (writer != null) writer.close()
+      }
+    }
+    def writeData(pw: PrintWriter) {
+      var tabular = new ArrayBuffer[List[Any]]
+      def header(cd: CurveData) = {
+        // "Method" + delimiter + cd.measurements.map(_.params.axisData.head._2).mkString(delimiter.toString)
+        tabular += List("Method") ++ cd.measurements.map(_.params.axisData.head._2)
+      }
+      def row(cd: CurveData) = {
+        // cd.context.curve + delimiter + cd.measurements.map(m => m.value).mkString(delimiter.toString)
+        tabular += List(cd.context.curve) ++ cd.measurements.map(_.value)
+      }
+      // def header(cd: CurveData) = {
+      // val m = cd.measurements.head
+      // "Method" + delimiter + m.params.axisData.head._1 + delimiter + s"Time (${m.units})"
+      // }
+      //
+      // def row(cd: CurveData) = {
+      // cd.measurements.map(m => cd.context.curve + delimiter + m.params.axisData.head._2 + delimiter + m.value).mkString("\n")
+      // }
+      // pw.println(header(headCurveData))
+      // result foreach { cd =>
+      // pw.println(row(cd))
+      //
+      // }
+      header(headCurveData)
+      result foreach row
+      tabular.toList.transpose foreach { line =>
+        pw.println(line.mkString(delimiter.toString))
+      }
+    }
+    print()
+    true
+  }
 }

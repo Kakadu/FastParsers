@@ -8,12 +8,12 @@ import TestsHelper._
  */
 class HttpParserSpecs extends FunSuite  {
 
-    (1 to 101).foreach{ i =>
-        test("httpparser " + "FastParsers/src/test/resources/tweet" + i){
-          compareImplementations("FastParsers/src/test/resources/tweet" + i,
-            HTTPImpl1.httpparser.respAndMessage,
-            HTTP,
-            x => HTTP.parse(HTTP.respAndMessage, x))
-      }
-    }
+    // (1 to 101).foreach{ i =>
+    //     test("httpparser " + "FastParsers/src/test/resources/tweet" + i){
+    //       compareImplementations("FastParsers/src/test/resources/tweet" + i,
+    //         HTTPImpl1.httpparser.respAndMessage,
+    //         HTTP,
+    //         x => HTTP.parse(HTTP.respAndMessage, x))
+    //   }
+    // }
 }
