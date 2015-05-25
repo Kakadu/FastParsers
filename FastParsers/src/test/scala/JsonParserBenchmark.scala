@@ -3,6 +3,7 @@
  */
 
 import fastparsers.input.InputWindow
+import org.scalameter.CurveData
 import org.scalameter.api._
 import JsonParsers._
 import scala.collection.mutable.ListBuffer
@@ -20,33 +21,19 @@ object JsonParserBenchmark extends PerformanceTest {
     new Executor.Warmer.Default,
     Aggregator.min,
     new Measurer.Default)
-  //lazy val reporter = new LoggingReporter
-  //lazy val reporter = new DsvReporter(',')
-  //lazy val reporter = Reporter.Composite(LoggingReporter(), DsvReporter(',') )
   lazy val reporter = Reporter.Composite(LoggingReporter(), CsvReporter(',') )
   lazy val persistor = Persistor.None
 
   val range = Gen.enumeration("size")(10)
 
-  val files = (1 to 4).foldLeft(new ListBuffer[Array[Char]]){ (acc,i) =>
+  val files = (1 to 5).foldLeft(new ListBuffer[Array[Char]]){ (acc,i) =>
     val filename = "FastParsers/src/test/resources/json" + i
     val data = scala.io.Source.fromFile(filename).getLines mkString "\n"
     acc.append(data.toCharArray)
     acc
   }.toList
 
-  val bigFileName = "FastParsers/src/test/resources/" + "json.big1"
-  val bigFile = scala.io.Source.fromFile(bigFileName).getLines mkString "\n"
-  val bigFileArray = bigFile.toCharArray
-  val bigFileSeq = new FastCharSequence(bigFileArray)
-
-  val vbigFileName = "FastParsers/src/test/resources/" + "json.vbig"
-  val vbigFile = scala.io.Source.fromFile(vbigFileName).getLines mkString "\n"
-  val vbigFileArray = vbigFile.toCharArray
-  val vbigFileSeq = new FastCharSequence(vbigFileArray)
-
-
-  performance of "JsonParser on small inputs" in {
+  performance of "JsonParser_on_small_inputs" in {
     measure method "FastParsers" in {
       using(range) in { j =>
         for (i <- 1 to j; m <- files)
@@ -54,12 +41,12 @@ object JsonParserBenchmark extends PerformanceTest {
       }
     }
 
-    measure method "LMS (gen2)" in {
-      using(range) in { j =>
-        for (i <- 1 to j; m <- files)
-          LMSJsonParserGen2.apply(m)
-      }
-    }
+    // measure method "LMS (gen2)" in {
+    //   using(range) in { j =>
+    //     for (i <- 1 to j; m <- files)
+    //       LMSJsonParserGen2.apply(m)
+    //   }
+    // }
 
     measure method "Combinators" in {
       using(range) in { j =>
@@ -70,29 +57,40 @@ object JsonParserBenchmark extends PerformanceTest {
   }
 
 
- /* performance of "JsonParser on a big input" in {
-    measure method "FastParsers" in {
-      using(range) in { j =>
-        for (i <- 1 to j)
-          JSonImplBoxed.jsonparser.value(bigFileArray)
-      }
-    }
+  val bigFileName = "FastParsers/src/test/resources/" + "json.big1"
+  val bigFile = scala.io.Source.fromFile(bigFileName).getLines mkString "\n"
+  val bigFileArray = bigFile.toCharArray
+  val bigFileSeq = new FastCharSequence(bigFileArray)
 
-    measure method "LMS (gen2)" in {
-      using(range) in { j =>
-        for (i <- 1 to j)
-          LMSJsonParserGen2.apply(bigFileArray)
-      }
-    }
+  // val vbigFileName = "FastParsers/src/test/resources/" + "json.vbig"
+  // val vbigFile = scala.io.Source.fromFile(vbigFileName).getLines mkString "\n"
+  // val vbigFileArray = vbigFile.toCharArray
+  // val vbigFileSeq = new FastCharSequence(vbigFileArray)
 
-   /* measure method "Combinators" in {
-      using(range) in { j =>
-        for (i <- 1 to j)
-          JSON.parse(JSON.value,bigFileSeq)
+  /*
+    performance of "JsonParser_on_big_inputs" in {
+      measure method "FastParsers" in {
+        using(range) in { j =>
+          for (i <- 1 to j)
+            JSonImplBoxed.jsonparser.value(bigFileArray)
+        }
       }
+
+  //    measure method "LMS (gen2)" in {
+  //      using(range) in { j =>
+  //        for (i <- 1 to j)
+  //          LMSJsonParserGen2.apply(bigFileArray)
+  //      }
+  //    }
+
+      measure method "Combinators" in {
+        using(range) in { j =>
+          for (i <- 1 to j)
+            JSON.parse(JSON.value, bigFileSeq)
+        }
+      }
+
     }*/
-
-  }*/
 
 
   /*performance of "JsonParser on a very big input" in {
@@ -195,9 +193,31 @@ case class CsvReporter(delimiter: Char) extends Reporter {
   import java.text.SimpleDateFormat
   import utils.Tree
   val sep = File.separator
+  val resultDir = "csv_results"
+
   def report(result: CurveData, persistor: Persistor) {
+    println("simple report: " + result.context.scope)
+    new File(s"$resultDir").mkdir()
+    val filename = s"$resultDir$sep${result.context.scope}.csv"
+
+     var writer: PrintWriter = null
+     try {
+        writer = new PrintWriter(new FileWriter(filename, false))
+        // writer = System.out
+        result.measurements foreach { (m: Measurement) =>
+          val nanos = m.data.complete map { x => x*1000 }
+          writer.println( nanos.mkString(",") )
+        }
+      } finally {
+        if (writer != null) writer.close()
+      }
+
+
   }
   def report(result: Tree[CurveData], persistor: Persistor) = {
+    true
+    /*
+    println("report: ")
     val currentDate = new Date
     val resultdir = "csv_results"
 
@@ -251,5 +271,6 @@ case class CsvReporter(delimiter: Char) extends Reporter {
     }
     print()
     true
+    */
   }
 }
